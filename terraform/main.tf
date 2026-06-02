@@ -33,8 +33,8 @@ module "gh-runner" {
   network_gateway     = "192.168.10.1"
   ssh_public_key_path = var.ssh_public_key_path
 
-  cpu       = 2
-  memory    = 4096
+  cpu       = 1
+  memory    = 2048
   disk_size = 10
 
   bridge = module.vlan1.bridge_name
@@ -53,8 +53,8 @@ module "wireguard" {
   ssh_public_key_path = var.ssh_public_key_path
 
   cpu       = 1
-  memory    = 1024
-  disk_size = 10
+  memory    = 256
+  disk_size = 8
 
   bridge = module.vlan1.bridge_name
 }
@@ -71,9 +71,9 @@ module "caddy" {
   network_gateway     = "192.168.10.1"
   ssh_public_key_path = var.ssh_public_key_path
 
-  cpu       = 3
-  memory    = 1024
-  disk_size = 10
+  cpu       = 1
+  memory    = 512
+  disk_size = 8
 
   bridge = module.vlan1.bridge_name
 }
@@ -91,11 +91,28 @@ module "dokploy" {
   ssh_public_key_path = var.ssh_public_key_path
 
   cpu       = 2
-  memory    = 4096
-  disk_size = 50
+  memory    = 2048
+  disk_size = 40
 
   bridge = module.vlan2.bridge_name
-  cloud_init_user_data_file = "../dokploy/dokploy.yaml"
+  cloud_init_user_data_file = "../dokploy/dokploy.yml"
+}
+
+module "cloudflare-tunnel" {
+  source = "./modules/lxc"
+
+  name                = "cloudflare-tunnel"
+  node_name           = "homelab"
+  lxc_id              = 212
+  lxc_ip               = "172.16.10.12"
+  network_gateway     = "172.16.10.1"
+  ssh_public_key_path = var.ssh_public_key_path
+
+  cpu       = 1
+  memory    = 256
+  disk_size = 8
+
+  bridge = module.vlan2.bridge_name
 }
 
 
