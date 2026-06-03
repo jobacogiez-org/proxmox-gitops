@@ -1,0 +1,63 @@
+name: Reusable Dokploy Deployment
+
+on:
+  workflow_call:
+    inputs:
+      project_name:
+        description: "Nom du projet (par défaut: nom du repo)"
+        required: false
+        type: string
+      app_name:
+        description: "Nom de l'application (par défaut: nom du repo)"
+        required: false
+        type: string
+    secrets:
+      DOKPLOY_TOKEN:
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Dokploy CLI & jq
+        run: |
+          npm install -g @dokploy/cli
+          sudo apt-get install -y jq
+
+      - name: Auto-Deploy to Dokploy
+        env:
+          DOKPLOY_TOKEN: ${{ secrets.DOKPLOY_TOKEN }}
+          DOKPLOY_HOST: https://dokploy.ton-domaine.fr
+          REPO_NAME: ${{ github.event.repository.name }}
+          PROJECT_NAME: ${{ inputs.project_name || github.event.repository.name }}
+          APP_NAME: ${{ inputs.app_name || github.event.repository.name }}
+          # On utilise github.repository pour avoir "owner/repo" lors du link
+          FULL_REPO_NAME: ${{ github.repository }} 
+        run: |
+          # 1. Connexion
+          dokploy auth login --token "$DOKPLOY_TOKEN" --host "$DOKPLOY_HOST"
+
+          # 2. Récupérer ou Créer le Projet
+          PROJECT_ID=$(dokploy project list --json | jq -r ".[] | select(.name == \"$PROJECT_NAME\") | .id" | head -n 1)
+          if [ -z "$PROJECT_ID" ]; then
+            echo "Création du projet $PROJECT_NAME..."
+            PROJECT_ID=$(dokploy project create --name "$PROJECT_NAME" --json | jq -r '.id')
+          fi
+          echo "Project ID: $PROJECT_ID"
+
+          # 3. Récupérer ou Créer l'Application
+          APP_ID=$(dokploy app list --json | jq -r ".[] | select(.name == \"$APP_NAME\" and .projectId == \"$PROJECT_ID\") | .id" | head -n 1)
+          if [ -z "$APP_ID" ]; then
+            echo "Création de l'application $APP_NAME..."
+            APP_ID=$(dokploy app create --name "$APP_NAME" --projectId "$PROJECT_ID" --json | jq -r '.id')
+            
+            # Configuration initiale (Lier au repo Git)
+            dokploy app update --appId "$APP_ID" \
+              --repository "$FULL_REPO_NAME" \
+              --branch "main" \
+              --buildType "docker"
+          fi
+          echo "App ID: $APP_ID"
+
+          # 4. Déployer
+          dokploy app deploy --appId "$APP_ID"

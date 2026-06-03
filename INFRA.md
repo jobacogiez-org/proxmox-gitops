@@ -132,3 +132,40 @@ nmcli connection up PVE1-blavogiez
 ![Détail après ajout](assets/infra/image-5.png)
 
 Nous avons donc accès à tous les sous-réseaux isolés définis dans `Allowed IPs` et depuis n'importe où, de façon sécurisée.
+
+## Automatisation Dokploy (GitOps)
+
+Depuis que nous avons migré vers Dokploy, le déploiement est automatisé via sa CLI et GitHub Actions. Plus besoin de scripts Ansible pour les sites.
+
+### 1. Pré-requis (Une seule fois)
+1. Aller sur le panel Dokploy : `https://dokploy.ton-domaine.fr`
+2. **Settings > Profile > API/CLI** : Générer un **JWT Token**.
+3. Ajouter ce token dans les **Secrets GitHub** (au niveau de l'organisation ou du repository) sous le nom `DOKPLOY_TOKEN`.
+
+### 2. Déploiement "Zéro Configuration" (Reusable Workflow)
+Pour éviter de copier le script de déploiement et le token Dokploy dans chaque projet, nous utilisons un **Workflow Réutilisable** centralisé dans ce repository.
+
+**Pré-requis :**
+Le secret `DOKPLOY_TOKEN` doit être configuré au niveau de l'**Organisation GitHub** (idéalement) pour que tous les repos puissent y accéder, ou dans le repo appelant.
+
+Dans n'importe quel repository applicatif, créez simplement ce fichier `.github/workflows/deploy.yml` :
+
+```yaml
+name: Deploy to Dokploy
+on:
+  push:
+    branches: [main]
+
+jobs:
+  call-deploy:
+    # Remplacez "VOTRE_USER" par votre nom d'utilisateur GitHub ou d'organisation
+    uses: VOTRE_USER/proxmox-gitops/.github/workflows/reusable-dokploy-deploy.yml@main
+    secrets:
+      DOKPLOY_TOKEN: ${{ secrets.DOKPLOY_TOKEN }}
+    # Optionnel: vous pouvez forcer un nom de projet/app spécifique
+    # with:
+    #   project_name: "Mon Projet Custom"
+    #   app_name: "mon-app"
+```
+
+C'est tout ! Le script centralisé s'occupera de créer le projet, l'application et de lancer le déploiement sur votre instance.
