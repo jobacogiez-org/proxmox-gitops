@@ -1,5 +1,0 @@
----
-- import_playbook: prepare-websites-deployment.yml
-- import_playbook: deploy-html-website.yml
-- import_playbook: deploy-vite-website.yml
-- import_playbook: reload-caddy.yml

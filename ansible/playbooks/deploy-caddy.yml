@@ -12,7 +12,6 @@
         mode: '0755'
       loop:
         - "{{ caddy_remote_dir }}"
-        - "{{ caddy_remote_dir }}/sites"
 
     - name: Copier les fichiers Docker (Dockerfile, compose)
       ansible.builtin.copy:

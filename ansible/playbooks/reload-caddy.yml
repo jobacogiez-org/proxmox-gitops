@@ -1,8 +1,0 @@
----
-- hosts: caddy
-  become: true
-
-  tasks:
-    - name: Recharger Caddy
-      ansible.builtin.command:
-        cmd: docker exec caddy caddy reload --config /etc/caddy/Caddyfile
