@@ -1,0 +1,72 @@
+- hosts: cloudflared
+  become: true
+  vars:
+    cloudflared_remote_dir: "/opt/cloudflared"
+    cloudflared_local_dir: "{{ playbook_dir }}/../../cloudflared"
+
+  tasks:
+    - name: S'assurer que le répertoire existe
+      ansible.builtin.file:
+        path: "{{ cloudflared_remote_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Copier le fichier docker-compose.yml
+      ansible.builtin.copy:
+        src: "{{ cloudflared_local_dir }}/docker-compose.yml"
+        dest: "{{ cloudflared_remote_dir }}/docker-compose.yml"
+        mode: '0644'
+      register: docker_compose_file
+
+    - name: Vérifier si le fichier .env existe localement
+      delegate_to: localhost
+      ansible.builtin.stat:
+        path: "{{ cloudflared_local_dir }}/.env"
+      register: local_env_file
+      become: false
+
+    - name: Copier le fichier .env (si présent)
+      ansible.builtin.copy:
+        src: "{{ cloudflared_local_dir }}/.env"
+        dest: "{{ cloudflared_remote_dir }}/.env"
+        mode: '0600'
+      when: local_env_file.stat.exists
+      register: env_file_remote
+
+    - name: Copier le fichier config.yml (templating via variables .env)
+      ansible.builtin.copy:
+        src: "{{ cloudflared_local_dir }}/config.yml"
+        dest: "{{ cloudflared_remote_dir }}/config.yml"
+        mode: '0644'
+      register: config_file
+
+    - name: Vérifier si le fichier credentials.json existe localement
+      delegate_to: localhost
+      ansible.builtin.stat:
+        path: "{{ cloudflared_local_dir }}/credentials.json"
+      register: local_creds_file
+      become: false
+
+    - name: Copier le fichier credentials.json
+      ansible.builtin.copy:
+        src: "{{ cloudflared_local_dir }}/credentials.json"
+        dest: "{{ cloudflared_remote_dir }}/credentials.json"
+        mode: '0600'
+      when: local_creds_file.stat.exists
+      register: creds_file_remote
+
+    - name: Vérifier si le conteneur cloudflared est en cours d'exécution
+      ansible.builtin.command: docker ps --filter "name=cloudflared" --filter "status=running" -q
+      register: cloudflared_running
+      changed_when: false
+
+    - name: Redémarrer cloudflared (si config/env a changé ou si éteint)
+      community.docker.docker_compose_v2:
+        project_src: "{{ cloudflared_remote_dir }}"
+        state: present
+      when: >
+        docker_compose_file.changed or 
+        (env_file_remote is defined and env_file_remote.changed) or 
+        config_file.changed or 
+        (creds_file_remote is defined and creds_file_remote.changed) or 
+        cloudflared_running.stdout == ""
