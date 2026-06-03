@@ -98,10 +98,10 @@ module "dokploy" {
   cloud_init_user_data_file = "../dokploy/dokploy.yml"
 }
 
-module "cloudflare-tunnel" {
+module "cloudflared" {
   source = "./modules/lxc"
 
-  name                = "cloudflare-tunnel"
+  name                = "cloudflared"
   node_name           = "homelab"
   lxc_id              = 212
   lxc_ip               = "172.16.10.12"

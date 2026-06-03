@@ -10,5 +10,7 @@ all:
       ansible_host: 192.168.10.12
     caddy:
       ansible_host: 192.168.10.13
+    cloudflared:
+      ansible_host: 172.16.10.12
     kanboard:
       ansible_host: 192.168.10.14
