@@ -1,0 +1,33 @@
+- hosts: wireguard
+  become: true
+  vars:
+    wgeasy_remote_dir: "/opt/wgeasy"
+    wgeasy_local_dir: "{{ playbook_dir }}/../../wgeasy"
+
+  tasks:
+    - name: Installer les dépendances Python pour Docker
+      ansible.builtin.apt:
+        name: 
+          - python3-docker
+          - python3-yaml
+        state: present
+        update_cache: true
+
+    - name: S'assurer que le répertoire existe
+      ansible.builtin.file:
+        path: "{{ wgeasy_remote_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Copier le fichier docker-compose.yml
+      ansible.builtin.copy:
+        src: "{{ wgeasy_local_dir }}/docker-compose.yml"
+        dest: "{{ wgeasy_remote_dir }}/docker-compose.yml"
+        mode: '0644'
+      register: docker_file
+
+    - name: Lancer wg-easy avec docker-compose
+      community.docker.docker_compose_v2:
+        project_src: "{{ wgeasy_remote_dir }}"
+        state: present
+        wait: true
