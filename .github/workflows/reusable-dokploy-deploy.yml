@@ -1,4 +1,4 @@
-name: Reusable Dokploy Deployment
+name: Déploiement dokploy réutilisable
 
 on:
   workflow_call:
@@ -11,33 +11,41 @@ on:
         description: "Nom de l'application (par défaut: nom du repo)"
         required: false
         type: string
+      compose_paths:
+        description: "Chemin du docker-compose.yml"
+        required: false
+        type: string
+        default: "./docker-compose.yml"
     secrets:
       DOKPLOY_TOKEN:
         required: true
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Install Dokploy CLI & jq
         run: |
           npm install -g @dokploy/cli
           sudo apt-get install -y jq
 
-      - name: Auto-Deploy to Dokploy
+      - name: Déploiement dokploy (Logique upsert)
         env:
           DOKPLOY_TOKEN: ${{ secrets.DOKPLOY_TOKEN }}
-          DOKPLOY_HOST: https://dokploy.ton-domaine.fr
+          DOKPLOY_HOST: http://172.16.10.11:3000
           REPO_NAME: ${{ github.event.repository.name }}
           PROJECT_NAME: ${{ inputs.project_name || github.event.repository.name }}
           APP_NAME: ${{ inputs.app_name || github.event.repository.name }}
-          # On utilise github.repository pour avoir "owner/repo" lors du link
-          FULL_REPO_NAME: ${{ github.repository }} 
+          COMPOSE_PATH: ${{ inputs.compose_paths }}
+          FULL_REPO_NAME: ${{ github.repository }}
         run: |
           # 1. Connexion
           dokploy auth login --token "$DOKPLOY_TOKEN" --host "$DOKPLOY_HOST"
 
-          # 2. Récupérer ou Créer le Projet
+          OWNER="${FULL_REPO_NAME%%/*}"
+          REPOSITORY="${FULL_REPO_NAME#*/}"
+
+          # 2.recup ou creer le projet
           PROJECT_ID=$(dokploy project list --json | jq -r ".[] | select(.name == \"$PROJECT_NAME\") | .id" | head -n 1)
           if [ -z "$PROJECT_ID" ]; then
             echo "Création du projet $PROJECT_NAME..."
@@ -45,19 +53,30 @@ jobs:
           fi
           echo "Project ID: $PROJECT_ID"
 
-          # 3. Récupérer ou Créer l'Application
-          APP_ID=$(dokploy app list --json | jq -r ".[] | select(.name == \"$APP_NAME\" and .projectId == \"$PROJECT_ID\") | .id" | head -n 1)
-          if [ -z "$APP_ID" ]; then
-            echo "Création de l'application $APP_NAME..."
-            APP_ID=$(dokploy app create --name "$APP_NAME" --projectId "$PROJECT_ID" --json | jq -r '.id')
-            
-            # Configuration initiale (Lier au repo Git)
-            dokploy app update --appId "$APP_ID" \
-              --repository "$FULL_REPO_NAME" \
-              --branch "main" \
-              --buildType "docker"
+          # 3.recup ou creer l'environnement production
+          ENVIRONMENT_ID=$(dokploy environment by-project-id --projectId "$PROJECT_ID" --json | jq -r ".[] | select(.name == \"production\") | .id" | head -n 1)
+          if [ -z "$ENVIRONMENT_ID" ]; then
+            echo "Création de l'environnement production..."
+            ENVIRONMENT_ID=$(dokploy environment create --name "production" --projectId "$PROJECT_ID" --json | jq -r '.id')
           fi
-          echo "App ID: $APP_ID"
+          echo "Environment ID: $ENVIRONMENT_ID"
 
-          # 4. Déployer
-          dokploy app deploy --appId "$APP_ID"
+          # 4.recup ou creer le compose
+          COMPOSE_ID=$(dokploy compose list --json | jq -r ".[] | select(.name == \"$APP_NAME\" and .environmentId == \"$ENVIRONMENT_ID\") | .id" | head -n 1)
+          if [ -z "$COMPOSE_ID" ]; then
+            echo "Création du compose $APP_NAME..."
+            COMPOSE_ID=$(dokploy compose create --name "$APP_NAME" --environmentId "$ENVIRONMENT_ID" --json | jq -r '.id')
+          fi
+          echo "Compose ID: $COMPOSE_ID"
+
+          # Configuration du compose
+          dokploy compose update --composeId "$COMPOSE_ID" \
+            --sourceType "github" \
+            --owner "$OWNER" \
+            --repository "$REPOSITORY" \
+            --branch "main" \
+            --composeType "docker-compose" \
+            --composePath "$COMPOSE_PATH"
+
+          # 5. Déployer
+          dokploy compose deploy --composeId "$COMPOSE_ID"

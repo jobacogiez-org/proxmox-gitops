@@ -1,0 +1,14 @@
+name: Appel d'un déploiement dokploy pour test (ici docker comspose)
+
+on:
+  push:
+    branches: [main, 19*]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: blavogiez/proxmox-configuration/.github/workflows/frontend-deploy-website.yml@19-poc-pour-la-cicd-dokploy
+    with:
+      compose_paths: ./services/test-kanboard-dokploy/docker-compose.yml
+    secrets:
+      DOKPLOY_TOKEN: ${{ secrets.DOKPLOY_TOKEN }}
