@@ -26,10 +26,10 @@ jobs:
     steps:
       - name: Install Dokploy CLI & jq
         run: |
-          npm install -g @dokploy/cli
+          sudo npm install -g @dokploy/cli
           sudo apt-get install -y jq
 
-      - name: Déploiement dokploy (Logique upsert)
+      - name: Configuration dokploy (Logique upsert)
         env:
           DOKPLOY_TOKEN: ${{ secrets.DOKPLOY_TOKEN }}
           DOKPLOY_HOST: http://172.16.10.11:3000
@@ -40,32 +40,32 @@ jobs:
           FULL_REPO_NAME: ${{ github.repository }}
         run: |
           # 1. Connexion
-          dokploy auth login --token "$DOKPLOY_TOKEN" --host "$DOKPLOY_HOST"
+          sudo dokploy auth --token "$DOKPLOY_TOKEN" --url "$DOKPLOY_HOST"
 
           OWNER="${FULL_REPO_NAME%%/*}"
           REPOSITORY="${FULL_REPO_NAME#*/}"
 
           # 2.recup ou creer le projet
-          PROJECT_ID=$(dokploy project list --json | jq -r ".[] | select(.name == \"$PROJECT_NAME\") | .id" | head -n 1)
+          PROJECT_ID=$(dokploy project all --json | jq -r ".[] | select(.name == \"$PROJECT_NAME\") | (.projectId // .id)" | head -n 1)
           if [ -z "$PROJECT_ID" ]; then
             echo "Création du projet $PROJECT_NAME..."
-            PROJECT_ID=$(dokploy project create --name "$PROJECT_NAME" --json | jq -r '.id')
+            PROJECT_ID=$(dokploy project create --name "$PROJECT_NAME" --json | jq -r '.projectId // .project.projectId // .id')
           fi
           echo "Project ID: $PROJECT_ID"
 
           # 3.recup ou creer l'environnement production
-          ENVIRONMENT_ID=$(dokploy environment by-project-id --projectId "$PROJECT_ID" --json | jq -r ".[] | select(.name == \"production\") | .id" | head -n 1)
+          ENVIRONMENT_ID=$(dokploy environment by-project-id --projectId "$PROJECT_ID" --json | jq -r ".[] | select(.name == \"production\") | (.environmentId // .id)" | head -n 1)
           if [ -z "$ENVIRONMENT_ID" ]; then
             echo "Création de l'environnement production..."
-            ENVIRONMENT_ID=$(dokploy environment create --name "production" --projectId "$PROJECT_ID" --json | jq -r '.id')
+            ENVIRONMENT_ID=$(dokploy environment create --name "production" --projectId "$PROJECT_ID" --json | jq -r '.environmentId // .id')
           fi
           echo "Environment ID: $ENVIRONMENT_ID"
 
           # 4.recup ou creer le compose
-          COMPOSE_ID=$(dokploy compose list --json | jq -r ".[] | select(.name == \"$APP_NAME\" and .environmentId == \"$ENVIRONMENT_ID\") | .id" | head -n 1)
+          COMPOSE_ID=$(dokploy compose search --environmentId "$ENVIRONMENT_ID" --json | jq -r ".[] | select(.name == \"$APP_NAME\") | (.composeId // .id)" | head -n 1)
           if [ -z "$COMPOSE_ID" ]; then
             echo "Création du compose $APP_NAME..."
-            COMPOSE_ID=$(dokploy compose create --name "$APP_NAME" --environmentId "$ENVIRONMENT_ID" --json | jq -r '.id')
+            COMPOSE_ID=$(dokploy compose create --name "$APP_NAME" --environmentId "$ENVIRONMENT_ID" --json | jq -r '.composeId // .id')
           fi
           echo "Compose ID: $COMPOSE_ID"
 
@@ -76,7 +76,7 @@ jobs:
             --repository "$REPOSITORY" \
             --branch "main" \
             --composeType "docker-compose" \
-            --composePath "$COMPOSE_PATH"
+            --composePath "$COMPOSE_PATH" \
+            --autoDeploy
 
-          # 5. Déployer
-          dokploy compose deploy --composeId "$COMPOSE_ID"
+          # et la maintenant il va observer le dépôt à chaque changement pour update

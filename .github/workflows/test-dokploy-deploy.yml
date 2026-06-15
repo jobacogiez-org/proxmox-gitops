@@ -7,7 +7,7 @@ on:
 
 jobs:
   deploy:
-    uses: blavogiez/proxmox-configuration/.github/workflows/frontend-deploy-website.yml@19-poc-pour-la-cicd-dokploy
+    uses: jobacogiez-org/proxmox-gitops/.github/workflows/reusable-dokploy-deploy.yml@19-poc-pour-la-cicd-dokploy
     with:
       compose_paths: ./services/test-kanboard-dokploy/docker-compose.yml
     secrets:
