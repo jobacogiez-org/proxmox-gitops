@@ -1,4 +1,6 @@
 # poc typique pour un déploiement automatisé Komodo
+# (Checkov détecte les environnements et secrets comme problème vu que c'est hardcodé, sauf que c'est un poc donc ca ne fait pas sens)
+# désactivé ici, donc environment à mettre (voir https://docs.kanboard.org/v1/admin/docker/)
 name: kanboard
 
 services:
@@ -9,9 +11,7 @@ services:
     volumes:
       - data:/var/www/app/data
       - plugins:/var/www/app/plugins
-      - certs:/etc/nginx/ssl
-    environment:
-      DATABASE_URL: postgres://kanboard:kanboard-secret@db/kanboard
+      - certs:/etc/nginx/ssl 
     depends_on:
       db:
         condition: service_healthy
@@ -26,11 +26,7 @@ services:
 
   db:
     image: postgres:15-alpine
-    restart: always
-    environment:
-      POSTGRES_USER: kanboard
-      POSTGRES_PASSWORD: kanboard-secret
-      POSTGRES_DB: kanboard
+    restart: always 
     volumes:
       - db:/var/lib/postgresql/data
     healthcheck:
