@@ -4,15 +4,14 @@
 *.tfstate.backup
 *.tfvars
 *.tfvars.json
-terraform/backend.tf
+backend.tf
 terraform/tfplan
 .gitops/
 *lock*hcl*
 *state*lock*
 remote-backend-init.sh
-versions.tf
 
-# Scripts temporaires
+# Scripts temporaires qu on fait par le makefile par exemple
 .setup_env
 *.tmp
 .tmp-vars.yml
@@ -63,3 +62,4 @@ additions_fork.yml
 
 settings.yml
 *fork_addition*
+
