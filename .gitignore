@@ -63,3 +63,5 @@ additions_fork.yml
 settings.yml
 *fork_addition*
 
+docs/MAKEFILE.md
+docs/SOPS.md
