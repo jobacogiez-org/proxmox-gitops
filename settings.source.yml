@@ -39,7 +39,7 @@ proxmox:
 monitoring:
   # Configuration pour pve_exporter et prometheus/loki
   pve_user: "prometheus@pve"
-  pve_token_name: "prometheus"
+  pve_token_name: ""
   prometheus_retention: "15d"
   loki_retention: "15d"
 

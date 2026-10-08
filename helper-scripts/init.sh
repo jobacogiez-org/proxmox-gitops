@@ -94,7 +94,7 @@ echo "==========================================================="
 
 check_dependencies
 
-log_info "Configuration des git hooks..."
+log_info "Configuration des git hooks (securite pre commit)..."
 git config core.hookspath .githooks 2>/dev/null || log_warn "Git non initialisé dans ce dossier."
 
 setup_sops_age

@@ -22,8 +22,7 @@ Il installe Alloy sur toutes les VMs et envoie la config `services/monitoring/al
 Pour le lancer :
 
 ```bash
-cd ansible
-./scripts/install_alloy.sh
+make deploy-alloy
 ```
 
 La config actuelle pousse les logs systemd avec `loki.source.journal`, les fichiers `/var/log/*.log`, et les logs Docker avec `loki.source.docker` vers Loki sur `192.168.10.14:3100`.
@@ -82,7 +81,7 @@ labels = {
 Aller dans Grafana (port 3000)
 -> Explore -> Loki
 
-Pour vérifier que tout arrive bien, on fait la requête `{host=~".+"}` qui va montrer toutes les logs lancés par les agents Alloy. (faire bien attention à la plage temporelle de sélection de la requête qui est par défaut à 1H ce qui peut etre en conflit avec le fuseau UTC-2)
+Pour vérifier que tout arrive bien, on fait la requête `{host=~".+"}` qui va montrer toutes les logs lancés par les agents Alloy. (faut bien faire attention à la plage temporelle de sélection de la requête qui est par défaut à 1H ce qui peut etre en conflit avec le fuseau UTC-2)
 ![Requête globale](assets/monitoring/image.png)
 
 Quelques commandes pour voir la source du problème :

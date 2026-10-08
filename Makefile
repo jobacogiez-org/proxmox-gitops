@@ -6,8 +6,8 @@ ANSIBLE_INVENTORY := ansible/inventories/inventory.yml
 
 # qq exemples : 
 # make tf TF_LAYER=core ACTION=plan
-# make tf-apply TF_LAYER=bootstrap
-# make tf-apply # en defaut il fera sur la couche terraform core
+# make tf-apply TF_LAYER=bootstrap
+# make tf-apply # en defaut il fera sur la couche terraform core
 # make deploy-compose SERVICE=monitoring
 
 lint-checkov: 
@@ -17,7 +17,7 @@ lint-tflint:
 	docker run --rm -v "$${PWD}:/repo" -w /repo ghcr.io/terraform-linters/tflint:latest --recursive
 
 
-# défaut
+# wrappers terraform
 TF_LAYER ?=core
 tf: tf-render-templates
 	cd $(TF_DIR)/$(TF_LAYER) && \
@@ -27,6 +27,15 @@ tf: tf-render-templates
 	else \
 		terraform $(ACTION); \
 	fi
+
+# injection des secrets dans terraform tfvars / backend (les fichiers générés sont gitignorés)
+tf-render-templates:
+	@echo "[INFO] Génération des fichiers Terraform depuis settings.enc.yml..."
+	@bash -c 'trap "rm -f .tmp-vars.yml" EXIT; \
+	sops -d settings.enc.yml > .tmp-vars.yml; \
+	j2 terraform/environments/production/core/backend.tf.j2 .tmp-vars.yml > terraform/environments/production/core/backend.tf; \
+	j2 terraform/environments/production/terraform.tfvars.j2 .tmp-vars.yml > terraform/environments/production/terraform.tfvars; \
+	echo "[INFO] Variables générées avec succès."'
 
 tf-init: 
 	$(MAKE) tf TF_LAYER=$(TF_LAYER) ACTION=init
@@ -40,6 +49,7 @@ tf-apply:
 tf-destroy: 
 	$(MAKE) tf TF_LAYER=$(TF_LAYER) ACTION=destroy
 
+# wrappers ansible
 deploy-compose-ci:
 	ANSIBLE_STRICT_HOST_KEY_CHECKING=false ansible-playbook ansible/playbooks/deploy_any_compose.yml -e "host=$(SERVICE) target_service=$(SERVICE)" -i $(ANSIBLE_INVENTORY) $(EXTRA_ARGS)
 
@@ -53,14 +63,6 @@ deploy-alloy:
 
 deploy-lxc: 
 	ANSIBLE_STRICT_HOST_KEY_CHECKING=false ansible-playbook ansible/playbooks/bootstrap.yml -i $(ANSIBLE_INVENTORIES)/lxc_inventory.yml $(EXTRA_ARGS)
-
-tf-render-templates:
-	@echo "[INFO] Génération des fichiers Terraform depuis settings.enc.yml..."
-	@bash -c 'trap "rm -f .tmp-vars.yml" EXIT; \
-	sops -d settings.enc.yml > .tmp-vars.yml; \
-	j2 terraform/environments/production/core/versions.tf.j2 .tmp-vars.yml > terraform/environments/production/core/versions.tf; \
-	j2 terraform/environments/production/terraform.tfvars.j2 .tmp-vars.yml > terraform/environments/production/terraform.tfvars; \
-	echo "[INFO] Variables générées avec succès."'
 
 edit-secrets:
 	EDITOR=vim sops settings.enc.yml

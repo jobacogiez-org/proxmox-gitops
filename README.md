@@ -45,10 +45,10 @@ Ainsi, chaque modification validée sur la branche `main` déclenche automatique
 Pour résumer rapidement, les déploiements des services d'administration sont réalisés par playbooks, avec un playbook Ansible pouvant assurer le déploiement de n'importe quel service en argument (grâce à l'arborescence du dépôt avec une logique uniforme). En CI/CD, nous itérons donc sur tous les services déployables et appelons ce playbook.
 
 Ce playbook va :
-- obtenir les secrets du Vault, secrets correspondant au service en argument (chemin = nom service) ;
-- copier la stack vers l'hôte (même nom que le service), s'agissant d'une VM ou LXC ;
+- charger les configurations et secrets déchiffrés depuis `settings.enc.yml` via SOPS ;
+- copier la stack vers l'hôte cible (VM ou LXC) ;
 - injecter les variables et secrets dans les templates Jinja2 ;
-- redémarrer la stack docker compose si l'ensemble a changé.
+- relancer la stack Docker Compose si des fichiers ont changé.
 
 ### Optimisation
 
@@ -60,6 +60,3 @@ Ces mises à jour sont appliquées sur les dépôts forks. En voici un exemple (
 <img width="1198" height="596" alt="image" src="https://github.com/user-attachments/assets/1bae44da-15ec-4ae2-846d-1de670e07528" />
 
 [Run correspondant](https://github.com/blavogiez-org/proxmox-configuration/actions/runs/28758799580)
-
-Il n'y a pas toujours de secrets Vault associés au service. Si il n'y en a pas, on met un avertissement.
-Pour voir le cas où il y en a un, voir le service `cloudflared` et [son itération](https://github.com/blavogiez-org/proxmox-configuration/actions/runs/28758799580/job/85270533716).

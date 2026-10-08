@@ -14,4 +14,4 @@ Ce script ne sert **qu'une seule fois** pour initialiser tout le projet.
 
 Une fois l'initialisation terminée, vous n'aurez plus jamais à utiliser les scripts de ce dossier. La gestion quotidienne de votre infrastructure, les mises à jour et les déploiements se feront exclusivement via le `Makefile` à la racine du projet.
 
-👉 **[Consulter la documentation du Makefile](../docs/MAKEFILE.md)**
+👉 **[Consulter le Makefile](../Makefile)**
