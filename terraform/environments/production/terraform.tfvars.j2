@@ -1,24 +1,21 @@
 # URL de l'API Proxmox
-proxmox_endpoint  = "https://{{ PROXMOX_HOST_IP }}:8006/api2/json"
+proxmox_endpoint  = "{{ proxmox.endpoint }}"
 
-# Utilisateur Proxmox pour Terraform (ex: terraform)
-# Domaine de l'utilisateur (ex: pve ou pam)
-# Identifiant du Token (ex: provision)
-# Secret du Token (généré une seule fois par Proxmox)
-proxmox_api_token = "{{ PROXMOX_USER }}@{{ PROXMOX_REALM }}!{{ PROXMOX_TOKEN_ID }}={{ PROXMOX_TOKEN_SECRET }}"
+# Utilisateur Proxmox pour Terraform
+proxmox_api_token = "{{ proxmox.user }}@{{ proxmox.realm }}!{{ proxmox.token_id }}={{ proxmox.token_secret }}"
 
 # Ignorer les erreurs TLS (true pour certificats auto-signés)
 proxmox_insecure = true
 
-proxmox_ssh_username         = "{{ PROXMOX_SSH_USER }}"
+proxmox_ssh_username         = "{{ proxmox.ssh_user }}"
 
 # Nom du fichier de votre clé SSH (ex: proxmox_terraform)
-proxmox_ssh_private_key_path = "~/.ssh/{{ PROXMOX_SSH_KEY_NAME }}"
-ssh_public_key_path          = "~/.ssh/{{ PROXMOX_SSH_KEY_NAME }}.pub"
+proxmox_ssh_private_key_path = "~/.ssh/{{ proxmox.ssh_key_name }}"
+ssh_public_key_path          = "~/.ssh/{{ proxmox.ssh_key_name }}.pub"
 
-storage        = "{{ PROXMOX_STORAGE }}"
+storage        = "{{ proxmox.storage }}"
 
 # Stockage pour les sauvegardes et templates (ex: local)
-backup_storage = "{{ BACKUP_STORAGE }}"
+backup_storage = "{{ proxmox.backup_storage }}"
 
-node_name      = "{{ PROXMOX_NODE }}"
+node_name      = "{{ proxmox.node }}"
