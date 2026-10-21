@@ -64,6 +64,14 @@ deploy-alloy:
 deploy-lxc: 
 	ANSIBLE_STRICT_HOST_KEY_CHECKING=false ansible-playbook ansible/playbooks/bootstrap.yml -i $(ANSIBLE_INVENTORIES)/lxc_inventory.yml $(EXTRA_ARGS)
 
+tf-render-templates:
+	@echo "[INFO] Génération des fichiers Terraform depuis settings.enc.yml..."
+	@bash -c 'set -e; trap "rm -f .tmp-vars.yml" EXIT; \
+	sops -d settings.enc.yml > .tmp-vars.yml; \
+	j2 terraform/environments/production/core/versions.tf.j2 .tmp-vars.yml > terraform/environments/production/core/versions.tf; \
+	j2 terraform/environments/production/terraform.tfvars.j2 .tmp-vars.yml > terraform/environments/production/terraform.tfvars; \
+	echo "[INFO] Variables générées avec succès."'
+
 edit-secrets:
 	EDITOR=vim sops settings.enc.yml
 	$(MAKE) tf-render-templates

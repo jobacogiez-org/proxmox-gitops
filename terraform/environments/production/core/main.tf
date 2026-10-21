@@ -94,7 +94,6 @@ module "monitoring" {
   disk_size = 35
 
   bridge = "prvvnet1"
-  firewall = true
 }
 
 # https://komo.do/docs/setup
