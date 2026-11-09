@@ -61,8 +61,6 @@ resource "proxmox_virtual_environment_container" "this" {
       initialization[0].user_account,
       initialization[0].ip_config,
       network_interface[0].mac_address,
-      ipv4,
-      ipv6,
     ]
   }
 }
