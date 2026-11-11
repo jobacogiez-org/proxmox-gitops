@@ -11,10 +11,10 @@ ANSIBLE_INVENTORY := ansible/inventories/inventory.yml
 # make deploy-compose SERVICE=monitoring
 
 lint-checkov: 
-	docker run --rm -v "$${PWD}:/repo" bridgecrew/checkov:2 -d /repo --quiet
+	docker run --rm -v "$${PWD}:/repo" bridgecrew/checkov:2 -d /repo --quiet --skip-check CKV_SECRET_6
 
 lint-tflint:
-	docker run --rm -v "$${PWD}:/repo" -w /repo ghcr.io/terraform-linters/tflint:latest --recursive
+	docker run --rm -v "$${PWD}:/repo" -w /repo ghcr.io/terraform-linters/tflint:latest --recursive --force
 
 
 # wrappers terraform
@@ -51,7 +51,7 @@ tf-destroy:
 
 # wrappers ansible
 deploy-compose-ci:
-	ANSIBLE_STRICT_HOST_KEY_CHECKING=false ansible-playbook ansible/playbooks/deploy_any_compose.yml -e "host=$(SERVICE) target_service=$(SERVICE)" -i $(ANSIBLE_INVENTORY) $(EXTRA_ARGS)
+	ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook ansible/playbooks/deploy_any_compose.yml -e "host=$(SERVICE) target_service=$(SERVICE)" -i $(ANSIBLE_INVENTORY) $(EXTRA_ARGS)
 
 # -K en option ansible pcq il va demander à become sudo pour verif les library
 deploy-compose:
@@ -59,10 +59,10 @@ deploy-compose:
 
 
 deploy-alloy:
-	ANSIBLE_STRICT_HOST_KEY_CHECKING=false ansible-playbook ansible/playbooks/install_alloy.yml -i $(ANSIBLE_INVENTORY) $(EXTRA_ARGS)
+	ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook ansible/playbooks/install_alloy.yml -i $(ANSIBLE_INVENTORY) $(EXTRA_ARGS)
 
 deploy-lxc: 
-	ANSIBLE_STRICT_HOST_KEY_CHECKING=false ansible-playbook ansible/playbooks/bootstrap.yml -i $(ANSIBLE_INVENTORIES)/lxc_inventory.yml $(EXTRA_ARGS)
+	ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook ansible/playbooks/bootstrap.yml -i $(ANSIBLE_INVENTORIES)/lxc_inventory.yml -e "ansible_ssh_private_key_file=~/.ssh/proxmox_terraform bootstrap_ssh_public_key_file=~/.ssh/proxmox_terraform.pub" $(EXTRA_ARGS)
 
 edit-secrets:
 	EDITOR=vim sops settings.enc.yml

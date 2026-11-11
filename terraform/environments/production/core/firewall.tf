@@ -31,6 +31,30 @@ resource "proxmox_virtual_environment_firewall_rules" "node" {
   rule {
     type    = "in"
     action  = "ACCEPT"
+    source  = "192.168.10.11/32"
+    dest    = "${var.proxmox_host_ip}/32"
+    dport   = "8006"
+    proto   = "tcp"
+    log     = "info"
+    comment = "V gh-runner vers API Proxmox"
+    enabled = true
+  }
+
+  rule {
+    type    = "in"
+    action  = "ACCEPT"
+    source  = "192.168.10.11/32"
+    dest    = "${var.proxmox_host_ip}/32"
+    dport   = "22"
+    proto   = "tcp"
+    log     = "info"
+    comment = "V gh-runner vers SSH Proxmox"
+    enabled = true
+  }
+
+  rule {
+    type    = "in"
+    action  = "ACCEPT"
     source  = "0.0.0.0/0"
     dport   = "51820"
     proto   = "udp"

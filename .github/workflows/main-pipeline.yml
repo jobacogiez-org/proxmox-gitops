@@ -1,16 +1,18 @@
-name: "Linters (ce dépôt commun ne déploie rien + runners publics)"
+name: "CI/CD Pipeline (Terraform & Services)"
 
 on:
   push:
+    branches: [ main, perso ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
-
 
 permissions:
   contents: read
-  
+
 jobs:
   static-analysis-checkov:
-    runs-on: ubuntu-latest 
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Analyse checkov
@@ -28,44 +30,87 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Analyse Hadolint
-        # Suppression de continue-on-error et no-fail pour rendre le job bloquant
         uses: hadolint/hadolint-action@v3.3.0
         with:
-          dockerfile: Dockerfile
-          recursive: true
+          dockerfile: services/**/Dockerfile
 
-  # terraform:
-  #   if: ${{ github.event_name == 'workflow_dispatch' }}
-  #   needs: [ static-analysis-checkov, static-analysis-tflint, static-analysis-hadolint ]
-  #   runs-on: self-hosted
-  #   steps:
-  #     - uses: actions/checkout@v4
-      
-  #     - name: Setup Terraform
-  #       uses: hashicorp/setup-terraform@v3
+  terraform-deploy:
+    # S'exécute sur le runner self-hosted (qui a accès au réseau Proxmox/S3)
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/perso'
+    needs: [ static-analysis-checkov, static-analysis-tflint, static-analysis-hadolint ]
+    runs-on: self-hosted
+    env:
+      SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
-  #     - name: Terraform Init
-  #       run: terraform -chdir=terraform/environments/production init
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
 
-  #     - name: Terraform Validate
-  #       run: terraform -chdir=terraform/environments/production validate
+      - name: Verify SOPS & Terraform
+        run: |
+          which sops || (curl -fsSL https://github.com/getsops/sops/releases/download/v3.9.4/sops-v3.9.4.linux.amd64 -o /usr/local/bin/sops && chmod +x /usr/local/bin/sops)
+          sops --version
+          terraform --version
 
-  #     - name: setup du secret terraform tfvars (evite d'avoir trop de variables)
-  #       run: |
-  #         umask 077
-  #         cat > terraform/environments/production/ci.auto.tfvars <<'EOF'
-  #         ${{ secrets.TERRAFORM_TFVARS }}
-  #         EOF
+      - name: Setup SSH Key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.ANSIBLE_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/proxmox_terraform
+          chmod 600 ~/.ssh/proxmox_terraform
+          ssh-keygen -y -f ~/.ssh/proxmox_terraform > ~/.ssh/proxmox_terraform.pub
+          chmod 644 ~/.ssh/proxmox_terraform.pub
 
-  #     # un plan, pas encore de apply ou quoi, ce serait plus complexe et sera géré après, avec backend distant et étude d'autres outils
-  #     - name: Terraform Plan
-  #       run: |
-  #         terraform -chdir=terraform/environments/production plan -no-color
-  #     # dans tous les cas même après ça fonctionnera par un principe de PR, jamais de apply
+      - name: Install j2cli
+        run: |
+          which j2 || sudo apt-get install -y j2cli
 
-  # que sur branche perso(fork)
+      - name: Détecter les changements Terraform
+        id: tf_changes
+        uses: tj-actions/changed-files@v47
+        with:
+          files: |
+            terraform/environments/production/bootstrap/**
+            terraform/environments/production/core/**
+            terraform/modules/**
+            settings.enc.yml
+
+      # Applique BOOTSTRAP si son dossier ou des fichiers globaux ont changé
+      - name: Terraform Apply (Bootstrap)
+        if: |
+          github.event_name == 'workflow_dispatch' ||
+          contains(steps.tf_changes.outputs.all_changed_files, 'terraform/environments/production/bootstrap') ||
+          contains(steps.tf_changes.outputs.all_changed_files, 'terraform/modules') ||
+          contains(steps.tf_changes.outputs.all_changed_files, 'settings.enc.yml')
+        run: make tf TF_LAYER=bootstrap ACTION="apply -auto-approve"
+
+      # Applique CORE si son dossier ou des fichiers globaux ont changé
+      - name: Terraform Apply (Core)
+        if: |
+          github.event_name == 'workflow_dispatch' ||
+          contains(steps.tf_changes.outputs.all_changed_files, 'terraform/environments/production/core') ||
+          contains(steps.tf_changes.outputs.all_changed_files, 'terraform/modules') ||
+          contains(steps.tf_changes.outputs.all_changed_files, 'settings.enc.yml')
+        run: make tf TF_LAYER=core ACTION="apply -auto-approve"
+
+      # Provisionne les conteneurs LXC (admin + docker) si la couche core ou les modules LXC ont changé
+      - name: Provisionner les conteneurs LXC
+        if: |
+          github.event_name == 'workflow_dispatch' ||
+          contains(steps.tf_changes.outputs.all_changed_files, 'terraform/environments/production/core') ||
+          contains(steps.tf_changes.outputs.all_changed_files, 'terraform/modules/lxc') ||
+          contains(steps.tf_changes.outputs.all_changed_files, 'ansible/playbooks/bootstrap.yml') ||
+          contains(steps.tf_changes.outputs.all_changed_files, 'ansible/inventories/lxc_inventory.yml')
+        run: make deploy-lxc
+
   services-to-deploy:
-    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/perso'
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/perso' || github.ref == 'refs/heads/main'
     runs-on: self-hosted
     needs: [ static-analysis-checkov, static-analysis-tflint, static-analysis-hadolint ]
     outputs:
@@ -74,7 +119,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
-      # cas du déclenchement à la main (= prend meme ce qui a pas changé)
       - name: Liste des services
         id: services
         uses: philips-labs/list-folder-action@v3.0
@@ -90,14 +134,17 @@ jobs:
           matrix: true
 
   ansible:
-    if: ${{ (github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/perso') && needs.services-to-deploy.outputs.services != '[]' }}
-    # donc need indirectement Checkov tflint hadolint
-    needs: [ services-to-deploy ]
+    if: |
+      always() &&
+      (needs.terraform-deploy.result == 'success' || needs.terraform-deploy.result == 'skipped') &&
+      needs.services-to-deploy.result == 'success' &&
+      (github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/perso' || github.ref == 'refs/heads/main') &&
+      needs.services-to-deploy.outputs.services != '[]'
+    needs: [ terraform-deploy, services-to-deploy ]
     runs-on: self-hosted
     strategy:
       fail-fast: false
       matrix:
-        # itération sur tous les services qui ont changé dans le dernier commit (ou tous si le workflow est lancé à la main). ca déploie que ce qui a changé, ça accélère grandement
         service: ${{ fromJSON(needs.services-to-deploy.outputs.services) }}
         exclude:
           - service: authentik
@@ -121,18 +168,17 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           echo "StrictHostKeyChecking no" >> ~/.ssh/config
+          echo "UserKnownHostsFile /dev/null" >> ~/.ssh/config
           chmod 600 ~/.ssh/config
 
       - name: Vérifier l'environnement Ansible
         run: |
           ansible-playbook --version
 
-      - name: Install Ansible Collections(on a du docker compose community)
+      - name: Install Ansible Collections
         run: |
           ansible-galaxy collection install -r ansible/requirements.yml
 
-      #https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/run-job-variations
-      # avec la matrix tous les services définis vont faire N déplooiements ansible
       - name: "Déploiement de ${{ matrix.service }}"
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
