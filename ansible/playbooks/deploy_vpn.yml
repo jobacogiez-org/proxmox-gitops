@@ -1,0 +1,14 @@
+- hosts: "{{ host }}"
+  become: true
+  tasks:
+    - name: "Vérifier si Docker est installé"
+      ansible.builtin.command: which docker
+      register: docker_installed
+      failed_when: false
+      changed_when: false
+
+    - name: "Installer Docker sur Proxmox (attention, non recommandé par Proxmox mais nécessaire pour wg-easy sur hôte)"
+      ansible.builtin.shell: curl -fsSL https://get.docker.com | sh
+      when: docker_installed.rc != 0
+
+- import_playbook: deploy_any_compose.yml
