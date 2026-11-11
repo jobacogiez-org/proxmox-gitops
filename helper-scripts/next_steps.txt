@@ -11,8 +11,10 @@ Prochaines étapes requises :
 
 2. Déployer l'infrastructure :
    Vous pouvez maintenant déployer votre infrastructure étape par étape :
-   - D'abord le bootstrap Terraform :
+   - D'abord le bootstrap Terraform (réseau et VM backend S3) :
      make tf-apply TF_LAYER=bootstrap
+   - Déployer la stack S3 et Terraboard :
+     make deploy-compose SERVICE=terraform-backend
    - Ensuite la couche core Terraform :
      make tf-apply
    - Puis provisionner les conteneurs LXC via Ansible :
