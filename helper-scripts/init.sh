@@ -101,7 +101,7 @@ setup_sops_age
 
 if [ ! -f "settings.enc.yml" ]; then
     log_info "Création de settings.enc.yml à partir de settings.source.yml..."
-    sops -e settings.source.yml > settings.enc.yml
+    sops --filename-override settings.enc.yml -e --output settings.enc.yml settings.source.yml
     log_warn "L'éditeur va s'ouvrir. Remplissez les valeurs."
     read -p "Appuyez sur Entrée..."
     $EDITOR settings.enc.yml
