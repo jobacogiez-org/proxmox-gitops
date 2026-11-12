@@ -1,0 +1,15 @@
+terraform {
+  backend "s3" {
+    bucket                      = "terraform-state"
+    key                         = "core/terraform.tfstate"
+    endpoints                   = { s3 = "http://192.168.10.18:9000" }
+    region                      = "us-east-1"
+    access_key                  = "{{ secrets.terraform_backend.s3_access_key if (secrets is defined and secrets.terraform_backend is defined and secrets.terraform_backend.s3_access_key is defined) else (s3_access_key | default(S3_ACCESS_KEY | default(''))) }}"
+    secret_key                  = "{{ secrets.terraform_backend.s3_secret_key if (secrets is defined and secrets.terraform_backend is defined and secrets.terraform_backend.s3_secret_key is defined) else (s3_secret_key | default(S3_SECRET_KEY | default(''))) }}"
+    skip_credentials_validation = true
+    skip_metadata_api_check     = true
+    skip_region_validation      = true
+    skip_requesting_account_id  = true
+    use_path_style              = true
+  }
+}

@@ -48,14 +48,3 @@ variable "storage" {
   description = "disque utilisé par la VM/LXC. Utiliser de préférence du ZFS raid1 avec redondance, et chiffré si possible"
   type        = string
 }
-variable "s3_access_key" {
-  description = "S3 Access Key"
-  type        = string
-  sensitive   = true
-}
-
-variable "s3_secret_key" {
-  description = "S3 Secret Key"
-  type        = string
-  sensitive   = true
-}

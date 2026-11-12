@@ -48,14 +48,3 @@ variable "backup_storage" {
   type        = string
   default     = "local"
 }
-variable "s3_access_key" {
-  description = "S3 Access Key"
-  type        = string
-  sensitive   = true
-}
-
-variable "s3_secret_key" {
-  description = "S3 Secret Key"
-  type        = string
-  sensitive   = true
-}

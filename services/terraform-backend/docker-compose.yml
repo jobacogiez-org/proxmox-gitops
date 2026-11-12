@@ -1,36 +1,39 @@
-version: '3.8'
-
 services:
   minio:
-    image: elestio/minio:latest
+    image: elestio/minio:latest@sha256:25348a257f1ece1b192f25f6cd9854618fa86422ac87b494b5d4e629c556d4bd
     env_file:
       - .env
     environment:
       MINIO_ROOT_USER: ${S3_ACCESS_KEY}
       MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}
-    command: server /data --console-address ":9001"
+    command: server /data
     restart: unless-stopped
     ports:
-      - '9000:9000'
-      - '9001:9001'
+      - "9000:9000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
       - minio_data:/data
 
   mc-init:
-    image: elestio/minio:latest
+    image: elestio/minio:latest@sha256:25348a257f1ece1b192f25f6cd9854618fa86422ac87b494b5d4e629c556d4bd
     depends_on:
-      - minio
+      minio:
+        condition: service_healthy
     env_file:
       - .env
     entrypoint: >
       /bin/sh -c "
-      sleep 5;
-      mc alias set local http://minio:9000 $${S3_ACCESS_KEY} $${S3_SECRET_KEY};
-      mc mb local/terraform-state || true;
+      mc alias set local http://minio:9000 $${S3_ACCESS_KEY} $${S3_SECRET_KEY} &&
+      mc mb --ignore-existing local/terraform-state
       "
 
   terraboard:
-    image: camptocamp/terraboard:latest
+    image: ghcr.io/camptocamp/terraboard:v2.3.0
+    restart: unless-stopped
     ports:
       - "8080:8080"
     env_file:
@@ -45,26 +48,35 @@ services:
       AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY}
       AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY}
       AWS_REGION: us-east-1
-      AWS_ENDPOINTS: http://minio:9000
-      AWS_S3_ENDPOINT: http://minio:9000
-      S3_BUCKET: terraform-state
-      S3_FORCE_PATH_STYLE: "true"
+      AWS_ENDPOINT: http://minio:9000
+      AWS_BUCKET: terraform-state
+      AWS_FORCE_PATH_STYLE: "true"
+      TERRABOARD_NO_LOCKS: "true"
+      TERRABOARD_NO_VERSIONING: "true"
+      GODEBUG: netdns=go
     depends_on:
-      - db
-      - mc-init
+      db:
+        condition: service_healthy
+      mc-init:
+        condition: service_completed_successfully
 
   db:
-    image: postgres:16
+    image: postgres:16.15-alpine
     environment:
       POSTGRES_DB: terraboard
       POSTGRES_USER: root
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d terraboard"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
-      - db:/var/lib/postgresql/data
+      - terraboard_db:/var/lib/postgresql/data
 
 volumes:
-  db:
+  terraboard_db:
     driver: local
   minio_data:
     driver: local

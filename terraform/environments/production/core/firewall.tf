@@ -155,6 +155,15 @@ resource "proxmox_virtual_environment_firewall_rules" "node" {
 }
 
 # La VM du backend Terraform appartient à la couche bootstrap donc on recherche son nom dans l'existant
+data "proxmox_virtual_environment_vms" "terraform_backend" {
+  node_name = var.node_name
+
+  filter {
+    name   = "name"
+    values = ["terraform-backend"]
+  }
+}
+
 # services d'administration à protéger
 # tout est isolé, le seul trafic autorisé sera de caddy vers leurs ports
 locals {
@@ -178,7 +187,7 @@ locals {
     }
     terraform_backend = {
       guest_type = "vm"
-      guest_id   = 118
+      guest_id   = one(data.proxmox_virtual_environment_vms.terraform_backend.vms).vm_id
       ports      = ["8080"]
     }
   }

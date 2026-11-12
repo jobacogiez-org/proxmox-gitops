@@ -21,8 +21,6 @@ lint-tflint:
 TF_LAYER ?=core
 tf: tf-render-templates
 	@bash -c ' \
-	export AWS_ACCESS_KEY_ID=$$(sops -d settings.enc.yml | grep -E "^S3_ACCESS_KEY:" | awk "{print \$$2}") && \
-	export AWS_SECRET_ACCESS_KEY=$$(sops -d settings.enc.yml | grep -E "^S3_SECRET_KEY:" | awk "{print \$$2}") && \
 	cd $(TF_DIR)/$(TF_LAYER) && \
 	if [[ "$(ACTION)" == init* ]]; then \
 		terraform $(ACTION); \
@@ -42,11 +40,8 @@ tf-render-templates:
 	@echo "[INFO] Génération des fichiers Terraform depuis settings.enc.yml..."
 	@bash -c 'set -e; trap "rm -f .tmp-vars.yml" EXIT; \
 	sops -d settings.enc.yml > .tmp-vars.yml; \
-	if [ -f terraform/environments/production/bootstrap/versions.tf.j2 ]; then \
-		j2 terraform/environments/production/bootstrap/versions.tf.j2 .tmp-vars.yml > terraform/environments/production/bootstrap/versions.tf; \
-	fi; \
-	if [ -f terraform/environments/production/core/versions.tf.j2 ]; then \
-		j2 terraform/environments/production/core/versions.tf.j2 .tmp-vars.yml > terraform/environments/production/core/versions.tf; \
+	if [ -f terraform/environments/production/core/backend.tf.j2 ]; then \
+		j2 terraform/environments/production/core/backend.tf.j2 .tmp-vars.yml > terraform/environments/production/core/backend.tf; \
 	fi; \
 	j2 terraform/environments/production/terraform.tfvars.j2 .tmp-vars.yml > terraform/environments/production/terraform.tfvars; \
 	echo "[INFO] Variables générées avec succès."'

@@ -5,7 +5,6 @@
 *.tfvars
 *.tfvars.json
 backend.tf
-versions.tf
 terraform/tfplan
 .gitops/
 *lock*hcl*
