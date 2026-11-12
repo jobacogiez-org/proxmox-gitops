@@ -1,0 +1,25 @@
+https://terraboard.priv.{{ domain }} {
+    @vpn_only remote_ip 10.8.0.0/24
+    handle @vpn_only {
+        # ui web terraboard
+        reverse_proxy 192.168.10.18:8080
+    }
+
+    # bloqué pour tout le reste
+    handle {
+        respond "Accès privé uniquement en local. Votre ip {remote_host} a été refusée" 403
+    }
+}
+
+https://s3.priv.{{ domain }} {
+    @vpn_only remote_ip 10.8.0.0/24 192.168.10.0/24
+    handle @vpn_only {
+        # api s3 minio
+        reverse_proxy 192.168.10.18:9000
+    }
+
+    # bloqué pour tout le reste
+    handle {
+        respond "Accès privé uniquement en local. Votre ip {remote_host} a été refusée" 403
+    }
+}

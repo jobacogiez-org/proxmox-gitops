@@ -54,7 +54,7 @@ resource "proxmox_virtual_environment_firewall_rules" "node" {
     action  = "ACCEPT"
     source  = "172.16.10.0/24"
     dest    = "192.168.10.14/32"
-    dport = "9090"
+    dport   = "9090"
     proto   = "tcp"
     log     = "info"
     comment = "V pubvnet1 vers monitoring (Prometheus restreint uniquement en write avec reverse proxy Caddy)"
@@ -66,7 +66,7 @@ resource "proxmox_virtual_environment_firewall_rules" "node" {
     action  = "ACCEPT"
     source  = "172.16.10.0/24"
     dest    = "192.168.10.14/32"
-    dport = "3100"
+    dport   = "3100"
     proto   = "tcp"
     log     = "info"
     comment = "V pubvnet1 vers monitoring (Loki restreint uniquement en write avec reverse proxy Caddy)"
@@ -121,12 +121,12 @@ resource "proxmox_virtual_environment_firewall_rules" "node" {
   }
 
   rule {
-    type    = "in"
-    action  = "ACCEPT" 
-    source  = "0.0.0.0/0"
-    dport   = "51820"
-    proto   = "udp"
-    log     = "info"
+    type   = "in"
+    action = "ACCEPT"
+    source = "0.0.0.0/0"
+    dport  = "51820"
+    proto  = "udp"
+    log    = "info"
 
     # l'authentification wireguard est toujours conditionnée à un échange clé publique / privée + udp
     # l'idée c'est d'autoriser si possible le moins de source d'ip possible quand même, donc si possible savoir à l'avance l'ip publique de là ou on va (ou alors par exemple whitelist les réseaux 4G)
@@ -154,13 +154,13 @@ resource "proxmox_virtual_environment_firewall_rules" "node" {
   ]
 }
 
-# La VM du backend Terraform appartient à la couche bootstrap donc on recherche son nom dans l'existant
-data "proxmox_virtual_environment_vms" "terraform_backend" {
+# la vm s3 appartient à la couche bootstrap donc on recherche son nom dans l'existant
+data "proxmox_virtual_environment_vms" "s3" {
   node_name = var.node_name
 
   filter {
     name   = "name"
-    values = ["terraform-backend"]
+    values = ["s3"]
   }
 }
 
@@ -185,10 +185,10 @@ locals {
       guest_id   = module.authentik.vm_id
       ports      = ["9000"]
     }
-    terraform_backend = {
+    s3 = {
       guest_type = "vm"
-      guest_id   = one(data.proxmox_virtual_environment_vms.terraform_backend.vms).vm_id
-      ports      = ["8080"]
+      guest_id   = one(data.proxmox_virtual_environment_vms.s3.vms).vm_id
+      ports      = ["8080", "9000"]
     }
   }
 

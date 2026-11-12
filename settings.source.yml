@@ -65,7 +65,7 @@ secrets:
     pve_exporter_token_value: ""
   proxmox:
     api_token: ""
-  terraform_backend:
+  s3:
     postgres_password: ""
     s3_access_key: ""
     s3_secret_key: ""

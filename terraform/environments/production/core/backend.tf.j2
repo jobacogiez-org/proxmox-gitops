@@ -2,10 +2,10 @@ terraform {
   backend "s3" {
     bucket                      = "terraform-state"
     key                         = "core/terraform.tfstate"
-    endpoints                   = { s3 = "http://192.168.10.18:9000" }
+    endpoints                   = { s3 = "https://s3.priv.{{ domain }}" }
     region                      = "us-east-1"
-    access_key                  = "{{ secrets.terraform_backend.s3_access_key }}"
-    secret_key                  = "{{ secrets.terraform_backend.s3_secret_key }}"
+    access_key                  = "{{ secrets.s3.s3_access_key }}"
+    secret_key                  = "{{ secrets.s3.s3_secret_key }}"
     skip_credentials_validation = true
     skip_metadata_api_check     = true
     skip_region_validation      = true

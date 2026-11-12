@@ -1,8 +1,8 @@
 resource "proxmox_download_file" "debian13" {
-  node_name    = var.node_name
-  datastore_id = var.backup_storage
-  content_type = "import"
-  overwrite    = true
+  node_name           = var.node_name
+  datastore_id        = var.backup_storage
+  content_type        = "import"
+  overwrite           = true
   overwrite_unmanaged = true
 
   url       = "https://cloud.debian.org/cdimage/cloud/trixie/20260623-2518/debian-13-generic-amd64-20260623-2518.qcow2"
@@ -62,12 +62,12 @@ resource "proxmox_virtual_environment_file" "cloud_init" {
 
 
 # backend distant s3 + terraboard (state core)
-module "terraform-backend" {
+module "s3" {
   source = "../../../modules/vm"
 
   depends_on = [proxmox_virtual_environment_vm.debian13]
 
-  name                = "terraform-backend"
+  name                = "s3"
   username            = "admin"
   node_name           = var.node_name
   vm_id               = 118
@@ -78,15 +78,15 @@ module "terraform-backend" {
   target_datastore_id = var.storage
   backup_datastore_id = var.backup_storage
 
-  cpu       = 1
+  cpu = 1
   # +500Mi pour etre large
   memory    = 2560
   disk_size = 15
 
-  bridge = "prvvnet1"
+  bridge   = "prvvnet1"
   firewall = true
   user_data_raw = templatefile("${path.root}/../../../../services/base-vm/cloud-init.yml", {
-    hostname       = "terraform-backend"
+    hostname       = "s3"
     ssh_public_key = trimspace(file(pathexpand(var.ssh_public_key_path)))
   })
 }
