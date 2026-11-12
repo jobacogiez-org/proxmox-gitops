@@ -24,9 +24,10 @@ runcmd:
   - systemctl enable qemu-guest-agent
   - systemctl start qemu-guest-agent
   - curl -fsSl https://get.docker.com | sh
-  # generation credentials aleatoires une seule fois (on en aura jamais besoin car c'est interne. c'est juste pour pas hardcoder en clair tout de meme)
+  # Insertion des credentials S3 stockés dans la source de vérité (SOPS)
   - sudo mkdir -p /opt/terraform-backend
   - POSTGRES_PASSWORD="$(openssl rand -hex 32)" && echo "POSTGRES_PASSWORD=$POSTGRES_PASSWORD" | sudo tee -a /opt/terraform-backend/.env >/dev/null
-  - APP_SECRET="$(openssl rand -hex 32)" && echo "APP_SECRET=$APP_SECRET" | sudo tee -a /opt/terraform-backend/.env >/dev/null
+  - echo "S3_ACCESS_KEY=${s3_access_key}" | sudo tee -a /opt/terraform-backend/.env >/dev/null
+  - echo "S3_SECRET_KEY=${s3_secret_key}" | sudo tee -a /opt/terraform-backend/.env >/dev/null
 
 

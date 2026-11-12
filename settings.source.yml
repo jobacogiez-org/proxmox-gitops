@@ -65,3 +65,7 @@ secrets:
     pve_exporter_token_value: ""
   proxmox:
     api_token: ""
+
+# Backend Terraform distant (RustFS / S3)
+s3_access_key: ""
+s3_secret_key: ""

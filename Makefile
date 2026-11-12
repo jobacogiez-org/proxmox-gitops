@@ -20,20 +20,34 @@ lint-tflint:
 # wrappers terraform
 TF_LAYER ?=core
 tf: tf-render-templates
+	@bash -c ' \
+	export AWS_ACCESS_KEY_ID=$$(sops -d settings.enc.yml | grep -E "^S3_ACCESS_KEY:" | awk "{print \$$2}") && \
+	export AWS_SECRET_ACCESS_KEY=$$(sops -d settings.enc.yml | grep -E "^S3_SECRET_KEY:" | awk "{print \$$2}") && \
 	cd $(TF_DIR)/$(TF_LAYER) && \
-	if [ -f ./remote-backend-init.sh ]; then . ./remote-backend-init.sh; fi && \
-	if [ -f ../terraform.tfvars ]; then \
-		terraform $(ACTION) -var-file="../terraform.tfvars"; \
-	else \
+	if [[ "$(ACTION)" == init* ]]; then \
 		terraform $(ACTION); \
-	fi
+	else \
+		if [ ! -d ".terraform" ]; then \
+			terraform init -input=false; \
+		fi && \
+		if [ -f ../terraform.tfvars ]; then \
+			terraform $(ACTION) -parallelism=3 -var-file="../terraform.tfvars"; \
+		else \
+			terraform $(ACTION) -parallelism=3; \
+		fi; \
+	fi'
 
 # injection des secrets dans terraform tfvars / backend (les fichiers générés sont gitignorés)
 tf-render-templates:
 	@echo "[INFO] Génération des fichiers Terraform depuis settings.enc.yml..."
-	@bash -c 'trap "rm -f .tmp-vars.yml" EXIT; \
+	@bash -c 'set -e; trap "rm -f .tmp-vars.yml" EXIT; \
 	sops -d settings.enc.yml > .tmp-vars.yml; \
-	j2 terraform/environments/production/core/backend.tf.j2 .tmp-vars.yml > terraform/environments/production/core/backend.tf; \
+	if [ -f terraform/environments/production/bootstrap/versions.tf.j2 ]; then \
+		j2 terraform/environments/production/bootstrap/versions.tf.j2 .tmp-vars.yml > terraform/environments/production/bootstrap/versions.tf; \
+	fi; \
+	if [ -f terraform/environments/production/core/versions.tf.j2 ]; then \
+		j2 terraform/environments/production/core/versions.tf.j2 .tmp-vars.yml > terraform/environments/production/core/versions.tf; \
+	fi; \
 	j2 terraform/environments/production/terraform.tfvars.j2 .tmp-vars.yml > terraform/environments/production/terraform.tfvars; \
 	echo "[INFO] Variables générées avec succès."'
 

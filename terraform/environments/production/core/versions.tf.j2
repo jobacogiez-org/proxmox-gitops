@@ -1,0 +1,24 @@
+terraform {
+  required_version = ">= 1.15.0"
+
+  required_providers {
+    proxmox = {
+      source  = "bpg/proxmox"
+      version = "= 0.107.0"
+    }
+  }
+
+  backend "s3" {
+    bucket                      = "terraform-state"
+    key                         = "core/terraform.tfstate"
+    # Accès direct à l'IP pour éviter le problème de poule et de l'oeuf avec Caddy/CoreDNS
+    endpoints                   = { s3 = "http://192.168.10.18:9000" }
+    region                      = "us-east-1"
+    skip_credentials_validation = true
+    skip_metadata_api_check     = true
+    skip_region_validation      = true
+    skip_requesting_account_id  = true
+    use_path_style              = true
+  }
+
+}

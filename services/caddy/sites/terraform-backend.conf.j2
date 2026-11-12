@@ -1,9 +1,21 @@
 https://terraform-backend.priv.{{ domain }} {
-
     @vpn_only remote_ip 10.8.0.0/24    
     handle @vpn_only {
-        # lynx
-        reverse_proxy 192.168.10.18:4000
+        # RustFS (S3 API)
+        reverse_proxy 192.168.10.18:9000
+    }
+
+    # Bloqué pour tout le reste
+    handle {
+        respond "Accès privé uniquement en local. Votre ip {remote_host} a été refusée" 403
+    }
+}
+
+https://terraboard.priv.{{ domain }} {
+    @vpn_only remote_ip 10.8.0.0/24    
+    handle @vpn_only {
+        # Terraboard Web UI
+        reverse_proxy 192.168.10.18:8080
     }
 
     # Bloqué pour tout le reste
