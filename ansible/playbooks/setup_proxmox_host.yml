@@ -1,0 +1,18 @@
+---
+- name: Configurer les regles FORWARD pour le SDN Proxmox
+  hosts: proxmox_nodes
+  become: yes
+  tasks:
+    - name: Creer un script if-up pour autoriser le trafic FORWARD du VNet
+      ansible.builtin.copy:
+        dest: /etc/network/if-up.d/sdn-forward-prvvnet1
+        mode: '0755'
+        content: |
+          #!/bin/bash
+          # Autoriser le transfert de paquets depuis le reseau prvvnet1 (SDN)
+          # Ignore si l'interface n'est pas up
+          iptables -C FORWARD -i prvvnet1 -j ACCEPT 2>/dev/null || iptables -I FORWARD -i prvvnet1 -j ACCEPT
+          iptables -C FORWARD -o prvvnet1 -m state --state RELATED,ESTABLISHED -j ACCEPT 2>/dev/null || iptables -I FORWARD -o prvvnet1 -m state --state RELATED,ESTABLISHED -j ACCEPT
+
+    - name: Appliquer la regle immediatement
+      ansible.builtin.command: /etc/network/if-up.d/sdn-forward-prvvnet1

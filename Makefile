@@ -67,3 +67,14 @@ deploy-lxc:
 edit-secrets:
 	EDITOR=vim sops settings.enc.yml
 	$(MAKE) tf-render-templates
+
+setup-proxmox:
+	@bash -c ' \
+	export PROXMOX_IP=$$(sops -d settings.enc.yml | grep -E "^PROXMOX_HOST_IP:" | awk "{print \$$2}") && \
+	ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook ansible/playbooks/setup_proxmox_host.yml -i "$$PROXMOX_IP," -e "ansible_user=root host=$$PROXMOX_IP" $(EXTRA_ARGS)'
+
+deploy-vpn:
+	@bash -c ' \
+	export PROXMOX_IP=$$(sops -d settings.enc.yml | grep -E "^PROXMOX_HOST_IP:" | awk "{print \$$2}") && \
+	ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook ansible/playbooks/deploy_vpn.yml -i "$$PROXMOX_IP," -e "ansible_user=root host=$$PROXMOX_IP target_service=wgeasy" $(EXTRA_ARGS)'
+
