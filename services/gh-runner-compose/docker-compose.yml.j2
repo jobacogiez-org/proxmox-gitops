@@ -1,6 +1,6 @@
 # approche bourrin avec 3 conteneurs en attendant de déployer le helm clean. 
 # C'est peut etre une approche à privilégier pour les machines peu puissantes / pour déployer rapidement avec un compose simple 
-# pour obtenir un GH Token allez sur (pour le depot voulu, nous c'est) : https://github.com/{{ github_org }}/proxmox-gitops/settings/actions/runners puis "new self-hosted runner "
+# pour obtenir un GH Token allez sur (pour le depot voulu, nous c'est) : https://github.com/{{ GITHUB_ORG }}/proxmox-gitops/settings/actions/runners puis "new self-hosted runner "
 services:
   containerized-runner-1:
     image: local/github-runner:ubuntu-noble-ansible
@@ -11,8 +11,8 @@ services:
     restart: unless-stopped
     privileged: true
     environment:
-      RUNNER_SCOPE: "org"
-      ORG_NAME: "{{ github_org }}"
+      RUNNER_SCOPE: "repo"
+      REPO_URL: "https://github.com/{{ GITHUB_ORG }}/{{ GITHUB_REPO }}"
       RUNNER_NAME: "containerized-runner-1"
       RUNNER_WORKDIR: "/tmp/runner/work"
       LABELS: "self-hosted,komodo"
@@ -39,8 +39,8 @@ services:
     restart: unless-stopped
     privileged: true
     environment:
-      RUNNER_SCOPE: "org"
-      ORG_NAME: "{{ github_org }}"
+      RUNNER_SCOPE: "repo"
+      REPO_URL: "https://github.com/{{ GITHUB_ORG }}/{{ GITHUB_REPO }}"
       RUNNER_NAME: "containerized-runner-2"
       RUNNER_WORKDIR: "/tmp/runner/work"
       LABELS: "self-hosted,komodo"
@@ -67,8 +67,8 @@ services:
     restart: unless-stopped
     privileged: true
     environment:
-      RUNNER_SCOPE: "org"
-      ORG_NAME: "{{ github_org }}"
+      RUNNER_SCOPE: "repo"
+      REPO_URL: "https://github.com/{{ GITHUB_ORG }}/{{ GITHUB_REPO }}"
       RUNNER_NAME: "containerized-runner-3"
       RUNNER_WORKDIR: "/tmp/runner/work"
       LABELS: "self-hosted,komodo"

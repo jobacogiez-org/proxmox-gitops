@@ -13,6 +13,41 @@
         file: "{{ playbook_dir }}/../../settings.enc.yml"
       no_log: true
 
+    - name: Dériver et mapper les variables et secrets
+      ansible.builtin.set_fact:
+        domain: "{{ DOMAIN | default('') }}"
+        admin_user: "{{ ADMIN_USER | default('admin') }}"
+        timezone: "{{ TIMEZONE | default('UTC') }}"
+        github_org: "{{ GITHUB_ORG | default('') }}"
+        github_repo: "{{ GITHUB_REPO | default('') }}"
+        pve_user: "{{ PVE_USER | default('') }}"
+        pve_token_name: "{{ PVE_TOKEN_NAME | default('') }}"
+        prometheus_retention: "{{ PROMETHEUS_RETENTION | default('3d') }}"
+        loki_retention: "{{ LOKI_RETENTION | default('3d') }}"
+        proxmox:
+          endpoint: "https://{{ PROXMOX_HOST_IP | default('') }}:8006/api2/json"
+          node: "{{ PROXMOX_NODE | default('pve') }}"
+        secrets:
+          caddy:
+            cloudflare_api_token: "{{ SECRETS_CADDY_CLOUDFLARE_API_TOKEN | default('') }}"
+          cloudflared:
+            tunnel_id: "{{ SECRETS_CLOUDFLARED_TUNNEL_ID | default('') }}"
+            credentials_json: "{{ SECRETS_CLOUDFLARED_CREDENTIALS_JSON | default('') }}"
+          monitoring:
+            grafana_admin_password: "{{ SECRETS_MONITORING_GRAFANA_ADMIN_PASSWORD | default('') }}"
+            pve_exporter_token_value: "{{ SECRETS_MONITORING_PVE_EXPORTER_TOKEN_VALUE | default('') }}"
+          komodo:
+            database_password: "{{ SECRETS_KOMODO_DATABASE_PASSWORD | default('') }}"
+            init_admin_password: "{{ SECRETS_KOMODO_INIT_ADMIN_PASSWORD | default('') }}"
+            webhook_secret: "{{ SECRETS_KOMODO_WEBHOOK_SECRET | default('') }}"
+            jwt_secret: "{{ SECRETS_KOMODO_JWT_SECRET | default('') }}"
+          authentik:
+            pg_pass: "{{ SECRETS_AUTHENTIK_PG_PASS | default('') }}"
+            secret_key: "{{ SECRETS_AUTHENTIK_SECRET_KEY | default('') }}"
+          gh_runner_compose:
+            pat_token: "{{ SECRETS_GH_RUNNER_COMPOSE_PAT_TOKEN | default('') }}"
+      no_log: true
+
     # cette tache évite la redondance pour la configuration des sites regardés en générant la configuration à partir des sites de Caddy
     # j'ai essayé avec des spotters de certs (= surveiller les sous domaines d'un domaine) mais c'est en retard sur la réalité
     - name: exclusif au service monitoring ; on charge les sites en variable pour générer le template des sites à surveiller le statut (voir monitoring/gatus/config/sites.yaml.j2)
@@ -44,7 +79,7 @@
       ansible.builtin.copy:
         src: "{{ target_local_dir }}"
         dest: "{{ target_remote_dir }}"
-        mode: '0644'
+        mode: "u=rwX,g=rX,o=rX"
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
       register: target_remote_stack

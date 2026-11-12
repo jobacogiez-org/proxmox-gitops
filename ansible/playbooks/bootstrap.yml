@@ -3,10 +3,8 @@
 - name: Preparation des conteneurs LXC
   hosts: all
   gather_facts: false
-  vars_prompt:
-    - name: ansible_ssh_private_key_file
-      prompt: Cle privee SSH
-      private: false
+  vars:
+    ansible_ssh_private_key_file: "{{ lookup('env', 'HOME') + '/.ssh/proxmox_terraform' }}"
 
   tasks:
     - name: Attendre SSH
@@ -24,12 +22,8 @@
 - name: Configuration initiale des conteneurs LXC
   hosts: all
   become: true
-  vars_prompt:
-    - name: bootstrap_ssh_public_key_file
-      prompt: Cle publique a installer
-      private: false
-
   vars:
+    bootstrap_ssh_public_key_file: "{{ lookup('env', 'HOME') + '/.ssh/proxmox_terraform.pub' }}"
     bootstrap_packages:
       - sudo
       - openssh-server
@@ -102,7 +96,7 @@
     - name: Installer docker si absent
       ansible.builtin.shell:
         cmd: |
-          docker --version || (curl -fsSl https://get.docker.com | sh)
+          docker --version || (curl -fsSL https://get.docker.com | sh)
 
     # ou alors faire podman
     - name: Ajouter l'utilisateur admin au groupe docker
